@@ -1,7 +1,6 @@
 # my-first-yolo-
 我的第一个目标检测练习 Codex
-
-用 VS Code 和 GitHub 做第一个 YOLO 项目
+# 用 VS Code 和 GitHub 做第一个 YOLO 项目
 
 这份教程按 Windows 电脑编写，适合刚开始学 Python 的人。做完后，你会有一个能识别图片物体的小程序，并把代码放到自己的 GitHub 账号里。
 
@@ -75,14 +74,9 @@ python -m pip install --timeout 300 --retries 5 ultralytics
 
 ## 第 5 步：保留原图并添加其他图片
 
-保留你现在的 Kuromi 图片 `test.jpg`，不要覆盖它。再找一张或多张包含常见物体的图片，例如猫、狗、汽车或杯子，也复制到 VS Code 左侧项目文件列表中，和 `README.md` 放在同一层。新图片依次命名为：
+保留你现在的 Kuromi 图片 `test.jpg`，不要覆盖它。再把其他 JPG 图片也复制到 VS Code 左侧项目文件列表中，和 `README.md` 放在同一层。文件名可以任意，例如你添加的人像 `cxk.jpg`，不必改名。
 
-```text
-test2.jpg
-test3.jpg
-```
-
-文件名都以 `test` 开头、以 `.jpg` 结尾即可。图片不要包含私人或敏感内容。Kuromi 图片可以保留；想看到识别框的话，再添加一张清晰的猫、狗、汽车或人物照片。
+图片不要包含私人或敏感内容。Kuromi 图片可以保留；想看到识别框的话，再添加一张清晰的猫、狗、汽车或人物照片。
 
 ## 第 6 步：告诉 GitHub 哪些东西不要上传
 
@@ -98,9 +92,10 @@ __pycache__/
 *.pyc
 *.pt
 runs/
+results/
 ```
 
-这样上传代码时就不会把虚拟环境、模型权重和临时训练结果一起传上去。
+这样上传代码时就不会把虚拟环境、模型权重和几十张识别结果一起传上去。以后想展示精选结果时，可以单独挑几张放进项目。
 
 ## 第 7 步：创建并运行识别程序
 
@@ -110,22 +105,44 @@ runs/
 
 ```python
 from pathlib import Path
+
 from ultralytics import YOLO
 
-# 加载已经训练好的 YOLO 小模型
-model = YOLO("yolo26n.pt")
+# 自动读取项目文件夹中的 JPG、JPEG、PNG、BMP 和 WEBP 图片
+image_extensions = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
+input_folder = Path(".")
+image_paths = sorted(
+    (
+        path
+        for path in input_folder.iterdir()
+        if path.is_file()
+        and path.suffix.lower() in image_extensions
+        and not path.stem.lower().startswith("detected")
+    ),
+    key=lambda path: path.name.lower(),
+)
 
-# 自动找到所有 test 开头的 JPG 图片，逐张识别
-for image_path in sorted(Path(".").glob("test*.jpg")):
-    result = model.predict(source=str(image_path), conf=0.25)[0]
-    output_path = f"detected_{image_path.stem}.jpg"
-    result.save(filename=output_path)
-    print(f"{image_path.name} 的结果已保存为 {output_path}")
+if not image_paths:
+    raise FileNotFoundError("项目文件夹里没有找到支持的图片。")
+
+model = YOLO("yolo26n.pt")
+output_folder = Path("results")
+output_folder.mkdir(exist_ok=True)
+
+for index, image_path in enumerate(image_paths, start=1):
+    result = model.predict(source=str(image_path), conf=0.25, verbose=False)[0]
+    output_path = output_folder / (
+        f"detected_{index:03d}_{image_path.stem}{image_path.suffix.lower()}"
+    )
+    result.save(filename=str(output_path))
+    print(f"{image_path.name}：检测到 {len(result.boxes)} 个目标；结果保存在 {output_path}")
+
+print(f"全部完成，共检查 {len(image_paths)} 张图片。")
 ```
 
 4. 点击编辑区右上角的 ▶（Run Python File/运行 Python 文件）。
-5. 第一次运行会下载模型。等终端显示每张图片对应的结果文件名。
-6. 左侧文件列表里会出现 `detected_test.jpg`、`detected_test2.jpg` 等结果图片，点开查看。
+5. 第一次运行会下载模型。等终端显示“全部完成，共检查 N 张图片”。
+6. 左侧打开 `results` 文件夹，可查看每张图片对应的识别结果。
 
 Kuromi 图片仍可能没有识别框，因为现成模型没学过这个角色。猫、狗、汽车等常见物体更容易识别。模型没框出每个物体也正常；照片清晰度、光线和拍摄角度都会影响结果。
 
@@ -152,8 +169,8 @@ VS Code 左边栏点击“分叉线”样子的 **Source Control（源代码管�
 
 ## 文件
 - `detect.py`：识别图片的 Python 程序。
-- `test.jpg`、`test2.jpg` 等：输入图片，保留原来的 Kuromi 图片并添加其他图片。
-- `detected_test.jpg`、`detected_test2.jpg` 等：每张输入图片对应的识别结果。
+- 项目文件夹里的 JPG、JPEG、PNG、BMP、WEBP 图片：程序会一起检查，不要求特定文件名。
+- `results` 文件夹：保存每张输入图片对应的识别结果。
 
 ## 怎么运行
 在 VS Code 终端运行：
@@ -173,7 +190,7 @@ python detect.py
 
 **点 ▶ 后提示找不到 Python？** 确认已安装 Python 和 Microsoft Python 扩展，然后重启 VS Code。
 
-**没有处理某张图片？** 检查图片是否和 `detect.py` 放在同一层，文件名是否以 `test` 开头并以 `.jpg` 结尾。
+**没有处理某张图片？** 检查图片是否和 `detect.py` 放在同一层，格式是否为 JPG、JPEG、PNG、BMP 或 WEBP。
 
 **提示找不到 `ultralytics`？** 按 `Ctrl + Shift + P`，选择 `Python: Select Interpreter`，选项目里的 `.venv`，再打开一个新终端，运行 `python -m pip install --timeout 300 --retries 5 ultralytics`。黄色波浪线是编辑器提示；最终是否能运行，以终端运行结果为准。
 
@@ -188,3 +205,4 @@ python detect.py
 - [VS Code 官方：Python 入门](https://code.visualstudio.com/docs/python/python-tutorial)
 - [VS Code 官方：连接 GitHub](https://code.visualstudio.com/docs/sourcecontrol/github)
 - [Ultralytics 官方：安装和第一次预测](https://docs.ultralytics.com/quickstart)
+
