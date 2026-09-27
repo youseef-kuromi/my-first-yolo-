@@ -1,7 +1,7 @@
 # my-first-yolo-
-我的第一个目标检测练习
+我的第一个目标检测练习 Codex
 
-# 用 VS Code 和 GitHub 做第一个 YOLO 项目
+用 VS Code 和 GitHub 做第一个 YOLO 项目
 
 这份教程按 Windows 电脑编写，适合刚开始学 Python 的人。做完后，你会有一个能识别图片物体的小程序，并把代码放到自己的 GitHub 账号里。
 
@@ -62,53 +62,74 @@ git --version
 2. 输入并选择 `Python: Create Environment`。
 3. 选择 `Venv`。
 4. 选择已安装的 Python 版本。
-5. 等待左侧文件列表出现 `.venv` 文件夹。
-6. 点击顶部 `Terminal` → `New Terminal`，输入：
+5. 环境名称保持默认的 `.venv`，按 Enter。
+6. 若询问是否安装常用软件包，选择“跳过包安装”。稍后会专门安装 YOLO。
+7. 等待左侧文件列表出现 `.venv` 文件夹。
+8. 点击顶部 `Terminal` → `New Terminal`，输入：
 
 ```powershell
-python -m pip install ultralytics
+python -m pip install --timeout 300 --retries 5 ultralytics
 ```
 
-安装需要一些时间，并会使用网络下载机器学习工具。先用 CPU 就可以，不用配置显卡。
+安装需要一些时间，并会使用网络下载机器学习工具，其中 PyTorch 可能有一百多 MB。先用 CPU 就可以，不用配置显卡。如果下载中断，等终端重新出现 `(.venv) PS ...>` 后，再运行同一条命令重试。
 
-## 第 5 步：放入一张图片
+## 第 5 步：保留原图并添加其他图片
 
-找一张包含常见物体的图片，例如猫、狗、汽车或杯子。把它复制到 VS Code 左侧项目文件列表中，和 `README.md` 放在同一层，并把文件名改成：
+保留你现在的 Kuromi 图片 `test.jpg`，不要覆盖它。再找一张或多张包含常见物体的图片，例如猫、狗、汽车或杯子，也复制到 VS Code 左侧项目文件列表中，和 `README.md` 放在同一层。新图片依次命名为：
 
 ```text
-test.jpg
+test2.jpg
+test3.jpg
 ```
 
-图片不要包含私人或敏感内容。
+文件名都以 `test` 开头、以 `.jpg` 结尾即可。图片不要包含私人或敏感内容。Kuromi 图片可以保留；想看到识别框的话，再添加一张清晰的猫、狗、汽车或人物照片。
 
-## 第 6 步：创建并运行识别程序
+## 第 6 步：告诉 GitHub 哪些东西不要上传
+
+`.venv` 里装着很多程序文件，不应该上传到 GitHub。我们用 `.gitignore` 告诉 Git 忽略它们。
+
+1. 在 VS Code 左侧文件列表上，点击“新建文件”。
+2. 文件名输入 `.gitignore`（文件名前面有一个点）。
+3. 把下面几行复制进去并按 `Ctrl + S` 保存：
+
+```text
+.venv/
+__pycache__/
+*.pyc
+*.pt
+runs/
+```
+
+这样上传代码时就不会把虚拟环境、模型权重和临时训练结果一起传上去。
+
+## 第 7 步：创建并运行识别程序
 
 1. 在 VS Code 左侧文件列表上，点击“新建文件”图标。
 2. 文件名输入 `detect.py`。
 3. 把下面代码复制进去，按 `Ctrl + S` 保存：
 
 ```python
+from pathlib import Path
 from ultralytics import YOLO
 
 # 加载已经训练好的 YOLO 小模型
 model = YOLO("yolo26n.pt")
 
-# 识别项目文件夹里的 test.jpg
-results = model.predict(source="test.jpg", conf=0.25)
-
-# 把带识别方框的结果保存为 detected.jpg
-results[0].save(filename="detected.jpg")
-
-print("识别完成！请在左侧找到 detected.jpg。")
+# 自动找到所有 test 开头的 JPG 图片，逐张识别
+for image_path in sorted(Path(".").glob("test*.jpg")):
+    result = model.predict(source=str(image_path), conf=0.25)[0]
+    output_path = f"detected_{image_path.stem}.jpg"
+    result.save(filename=output_path)
+    print(f"{image_path.name} 的结果已保存为 {output_path}")
 ```
 
 4. 点击编辑区右上角的 ▶（Run Python File/运行 Python 文件）。
-5. 第一次运行会下载模型，等终端显示“识别完成”。
-6. 左侧文件列表里找到 `detected.jpg`，点开查看结果。
+5. 第一次运行会下载模型。等终端显示每张图片对应的结果文件名。
+6. 左侧文件列表里会出现 `detected_test.jpg`、`detected_test2.jpg` 等结果图片，点开查看。
 
-模型没框出每个物体也正常。它只认识训练时学过的一些常见类别；照片清晰度、光线和拍摄角度都会影响结果。
+Kuromi 图片仍可能没有识别框，因为现成模型没学过这个角色。猫、狗、汽车等常见物体更容易识别。模型没框出每个物体也正常；照片清晰度、光线和拍摄角度都会影响结果。
 
-## 第 7 步：把成果保存到 GitHub
+## 第 8 步：把成果保存到 GitHub
 
 VS Code 左边栏点击“分叉线”样子的 **Source Control（源代码管理）** 图标，或按 `Ctrl + Shift + G`。
 
@@ -120,7 +141,7 @@ VS Code 左边栏点击“分叉线”样子的 **Source Control（源代码管�
 
 **保存和上传是两件事：** `Commit` 是先把改动记录在电脑上；`Sync Changes` / `Publish Branch` 才会把它传到 GitHub。
 
-## 第 8 步：写项目说明
+## 第 9 步：写项目说明
 
 在 VS Code 点开 `README.md`，把内容改成下面这样并按 `Ctrl + S`：
 
@@ -131,16 +152,17 @@ VS Code 左边栏点击“分叉线”样子的 **Source Control（源代码管�
 
 ## 文件
 - `detect.py`：识别图片的 Python 程序。
-- `test.jpg`：输入图片。
-- `detected.jpg`：模型识别后的图片。
+- `test.jpg`、`test2.jpg` 等：输入图片，保留原来的 Kuromi 图片并添加其他图片。
+- `detected_test.jpg`、`detected_test2.jpg` 等：每张输入图片对应的识别结果。
 
 ## 怎么运行
 在 VS Code 终端运行：
 
 ```powershell
-python -m pip install ultralytics
 python detect.py
 ```
+
+如果还没安装 YOLO，先运行 `python -m pip install --timeout 300 --retries 5 ultralytics`。
 
 这是一个入门练习，使用已经训练好的模型，没有用自己的图片重新训练模型。
 ````
@@ -151,9 +173,11 @@ python detect.py
 
 **点 ▶ 后提示找不到 Python？** 确认已安装 Python 和 Microsoft Python 扩展，然后重启 VS Code。
 
-**提示找不到 `test.jpg`？** 检查图片是否和 `detect.py` 放在同一层，名字是否正好是 `test.jpg`。
+**没有处理某张图片？** 检查图片是否和 `detect.py` 放在同一层，文件名是否以 `test` 开头并以 `.jpg` 结尾。
 
-**提示找不到 `ultralytics`？** 在 VS Code 的终端运行 `python -m pip install ultralytics`。如果装完仍提示找不到，按 `Ctrl + Shift + P`，选择 `Python: Select Interpreter`，再选项目里的 `.venv`。
+**提示找不到 `ultralytics`？** 按 `Ctrl + Shift + P`，选择 `Python: Select Interpreter`，选项目里的 `.venv`，再打开一个新终端，运行 `python -m pip install --timeout 300 --retries 5 ultralytics`。黄色波浪线是编辑器提示；最终是否能运行，以终端运行结果为准。
+
+**PyTorch 下载到一半报错？** 通常是网络下载中断。等终端回到 `(.venv) PS ...>` 提示符后，再运行安装命令重试；如果仍反复超时，可以先改用 Google Colab 跑识别，避免在本机下载大型依赖。
 
 **GitHub 看不到新文件？** 回到 VS Code 的源代码管理，检查是否完成 `Commit`，然后点击 `Sync Changes` 或 `Publish Branch`。
 
